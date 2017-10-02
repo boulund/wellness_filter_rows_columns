@@ -103,7 +103,7 @@ def main(table_fn, min_rowsum, min_colsum, outfile, separator="\t"):
             for filtered_row in filtered_rows:
                 out.write(separator.join(str(v) for v in filtered_row)+"\n")
         print("Filtered", row_filterer.filtered_rows, "rows.")
-        print("Filtered row(s):", "\t".join(row_filterer.removed_rows))
+        print("Filtered row(s):\n", "\n".join(row_filterer.removed_rows))
     elif min_colsum > -1 and min_rowsum == -1:
         # Two-pass column filtering
         rows2 = yield_rows(table_fn)
@@ -121,7 +121,7 @@ def main(table_fn, min_rowsum, min_colsum, outfile, separator="\t"):
             for row in column_filterer.filter_columns(rows3):
                 out.write("\t".join(str(v) for v in row)+"\n")
         print("Filtered", column_filterer.num_columns - sum(column_filterer.keep_cols), "columns.")
-        print("Filtered column(s):", "\t".join(column_headers[1:][np.invert(column_filterer.keep_cols)]))
+        print("Filtered column(s):\n", "\n".join(column_headers[1:][np.invert(column_filterer.keep_cols)]))
     elif (min_colsum > -1 and min_rowsum > -1) or (min_colsum == -1 and min_rowsum == -1):
         print("Code currently cannot do both row and column filtering at the same time.")
 
