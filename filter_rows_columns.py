@@ -33,6 +33,10 @@ def parse_args():
             type=float,
             help="Minimum column sum to include row in output, "
                  "-1 skips column filtering [%(default)s].")
+    parser.add_argument("-i", "--index-columns", metavar="i",
+            default=1,
+            type=int,
+            help="Number of index columns [%(default)s].")
 
     if len(argv) < 2:
         parser.print_help()
@@ -53,19 +57,20 @@ def yield_rows(filename, separator="\t"):
 class Column_filterer():
     """Filter columns in a two-pass operation.
     """
-    def __init__(self, num_columns):
+    def __init__(self, num_columns, index_columns):
         self.filtered_columns = 0
         self.num_columns = num_columns
+        self.index_columns = index_columns
 
     def compute_colsums(self, rows, min_colsum):
         self.col_sums = np.zeros(self.num_columns, dtype=np.int32)
         for row in rows:
-            self.col_sums += np.array(row[1:], dtype=np.int32)
+            self.col_sums += np.array(row[self.index_columns:], dtype=np.int32)
         self.keep_cols = self.col_sums >= min_colsum
 
     def filter_columns(self, rows):
         for row in rows:
-            value_columns = np.array(row[1:], dtype=np.int32)
+            value_columns = np.array(row[self.index_columns:], dtype=np.int32)
             new_line = (row[0],), value_columns[self.keep_cols]
             yield chain(*new_line) 
 
@@ -73,13 +78,14 @@ class Column_filterer():
 class Row_filterer():
     """Yield rows that have rowsum >= min_rowsum.
     """
-    def __init__(self):
+    def __init__(self, index_columns):
         self.filtered_rows = 0
         self.removed_rows = []
+        self.index_columns = index_columns
 
     def filter_rows(self, rows, min_rowsum):
         for row in rows:
-            rowsum = sum(int(v) for v in row[1:])
+            rowsum = sum(int(v) for v in row[self.index_columns:])
             if rowsum >= min_rowsum:
                 yield row
             else:
@@ -87,14 +93,14 @@ class Row_filterer():
                 self.removed_rows.append(row[0])
 
 
-def main(table_fn, min_rowsum, min_colsum, outfile, separator="\t"):
+def main(table_fn, min_rowsum, min_colsum, outfile, index_columns, separator="\t"):
     """Filter rows and/or columns from tab separated table.
     """
 
     if min_rowsum > -1 and min_colsum == -1:
         rows = yield_rows(table_fn)
         header_line = next(rows)
-        row_filterer = Row_filterer()
+        row_filterer = Row_filterer(index_columns)
         filtered_rows = row_filterer.filter_rows(rows, min_rowsum)
 
         print("Writing filtered table to", outfile)
@@ -108,7 +114,7 @@ def main(table_fn, min_rowsum, min_colsum, outfile, separator="\t"):
         # Two-pass column filtering
         rows2 = yield_rows(table_fn)
         num_columns = len(next(rows2))-1
-        column_filterer = Column_filterer(num_columns)
+        column_filterer = Column_filterer(num_columns, index_columns)
         column_filterer.compute_colsums(rows2, min_colsum)
 
         rows3 = yield_rows(table_fn)
@@ -131,4 +137,6 @@ if __name__ == "__main__":
     main(options.TABLE,
          options.rowsum,
          options.colsum,
-         options.outfile)
+         options.outfile,
+         options.index_columns,
+         )
