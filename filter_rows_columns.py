@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Filter rows or columns (or both) in tab separated tables
 # Fredrik Boulund 2017
+# And it is awesome!!
 
 from sys import argv, exit
 from itertools import chain
